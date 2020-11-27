@@ -1,1 +1,3 @@
-console.log("hello");
+import $ from "jquery";
+//import $ = require("jquery");
+$("#Test").html("Hello World");
