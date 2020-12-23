@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票定期定額測試</title>
+    <script src="Script/require.js"></script>
+    <script src="Script/gunzip.min.js"></script>
+    <style type="text/css">
+        span.component {
+            display: inline-block;
+            /* 處理元件<span>抓不到width與height問題 */
+            position: relative;
+        }
+    </style>
+    <link href="InvTable.css" rel="stylesheet">
+</head>
+
+<body>
+    <table class="InvTable" width="100%" border="1">
+        <tr>
+            <td colspan="2">
+                <div id="controlPanel">
+                    <button id="btnClear">Clear</button>&nbsp;
+                    <button id="btnReset">Reset</button>&nbsp;
+                    <button id="btnQuery">Query</button>&nbsp;
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td width="15%">投資標的</td>
+            <td><input type="text" id="xStockId" value="2330"></td>
+        </tr>
+        <tr>
+            <td>投資金額</td>
+            <td><input type="text" id="xMoney" value="50000"></td>
+        </tr>
+        <tr>
+            <td>每月扣款日</td>
+            <td>
+                <input class="chk06" type="checkbox">6&nbsp;&nbsp;&nbsp;&nbsp;
+                <input class="chk16" type="checkbox">16&nbsp;&nbsp;&nbsp;&nbsp;
+                <input class="chk26" type="checkbox">26&nbsp;&nbsp;&nbsp;&nbsp;
+            </td>
+        </tr>
+        <tr>
+            <td>投資區間</td>
+            <td><input type="text" id="xDate" value="2020-01-01"> ~ 至今</td>
+        </tr>
+    </table>
+    <br />
+    <hr />
+    <span class="component" id="StockChart" style="width: 800px; height: 300px;"></span>
+    <br />
+    <hr />
+
+    <table class="InvTable" width="100%" border="1">
+        <tr>
+            <td width="15%">合計股數</td>
+            <td> <span id="SumShares"></span></td>
+        </tr>
+        <tr>
+            <td>合計成本</td>
+            <td> <span id="SumAmt"></span></td>
+        </tr>
+        <tr>
+            <td width="15%">股票市值</td>
+            <td> <span id="RealAmt"></span></td>
+        </tr>
+        <tr>
+            <td>獲利率</td>
+            <td> <span id="InvROI"></span></td>
+        </tr>
+    </table>
+    <br />
+
+    <table id="investTable" class="InvTable" width="100%" border="1">
+        <tr>
+            <th>申請扣款日</th>
+            <th>實際扣款日</th>
+            <th>收盤價</th>
+            <th>股數</th>
+            <th>投資金額(成本)</th>
+        </tr>
+    </table>
+</body>
+
+</html>
+<script>
+    Number.prototype.padLeft = function (base, chr) {
+        var len = (String(base || 10).length - String(this).length) + 1;
+        return len > 0 ? new Array(len).join(chr || '0') + this : this;
+    };
+    // 數值三位加逗號 1234.56 -> 1,234.56
+    function addComma(x) {
+        var parts = x.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+    }
+    // RequireJS 配置
+    require.config({
+        // 通過一個相對的路徑 baseUrl來載入所有程式碼。baseUrl通常被設定成data-main屬性指定指令碼的同級目錄。
+        baseUrl: "./Script",
+        // 第三方指令碼模組的別名,jquery -> lib/jquery
+        paths: {
+            "jquery": "lib/jquery"
+        }
+    });
+    require(["jquery", "StockQuery", "StockChart"], function ($, SyspowerLib, SyspowerLib2) {
+        $(document).ready(function () {
+            let initObj = {
+                "descroption": "test",
+                "baseURL": "localhost:8080",
+            };
+
+            var chartObj = {
+                "ComponentId": "StockChart", "FontType": "Arial, sans-serif", "FontSize": 32, "AxisFontSize": 10,
+                "BgColor": "#84C1FF", "ChartBgColor": "#ffffff", "AxisAmount": 5,
+                "TopHeight": 30, "BottomHeight": 30, "TitleFontSize": 16, "TitleLabel": "2330 定期定額獲利率",
+                "ShowChartBorder": true, "ShowQuoteLine": true, "QuoteLineColor": "#111111"
+                //"PaintOnCreate": true,
+            };
+            var aStockChart = new SyspowerLib2.StockChart(chartObj);
+
+            function mCallbackHandler(data) {
+                //console.log(data);
+                // 計算預計扣款日、實際扣款日等相關資料
+                let b06 = $(".chk06").prop('checked');
+                let b16 = $(".chk16").prop('checked');
+                let b26 = $(".chk26").prop('checked');
+                var xMoney = $("#xMoney").val();
+                var invList = getDeductionData(data, b06, b16, b26, xMoney);
+
+                var aTickList = [];
+                for (let i = 0, n = invList.length; i < n; i++) {
+                    let RowData = "";
+                    RowData += "<tr>";
+                    RowData += "<td>" + invList[i].PlanDate + "</td>";
+                    RowData += "<td>" + invList[i].MktDate + "</td>";
+                    RowData += "<td>" + invList[i].CP + "</td>";
+                    RowData += "<td>" + addComma(invList[i].Shares) + "</td>";
+                    RowData += "<td>" + addComma(invList[i].Amt) + "</td>";
+                    RowData += "</tr>";
+                    aTickList.push(RowData);
+                }
+                // 資料顯示順序
+                aTickList.reverse();
+                $("#investTable tr:gt(0)").remove();
+                $('#investTable').append(aTickList.join(""));
+
+                aStockChart.setData(data, invList);
+                aStockChart.repaint();
+                var aInvResult = aStockChart.getInvResult();
+                //console.log(aInvResult);
+                // 更新報酬狀態
+                $("#SumShares").html(addComma(aInvResult.SumShares));
+                $("#SumAmt").html(addComma(aInvResult.SumAmt));
+                $("#RealAmt").html(addComma(aInvResult.RealAmt));
+                $("#InvROI").html(((aInvResult.RealAmt - aInvResult.SumAmt) / aInvResult.SumAmt * 100).toFixed(2) + "%");
+
+            }
+
+            function mErrorHandlerEx(jqXHR, exception) {
+                console.log("mErrorHandler:" + jqXHR + " " + exception);
+            }
+
+            function getDeductionData(data, b06, b16, b26, xMoney) {
+                let ret = [];
+                // 這個月份扣款日找到了沒 ?
+                let b06_find = false;
+                let b16_find = false;
+                let b26_find = false;
+                let b26_find_prevM = false; // 運氣不好的時候26~31都放假，得多找01~05
+                let lastMonth = "";
+                for (let i = 0; i < data.length; i++) {
+                    var aMktDate = data[i].MktDate.split('-');
+                    var aYear = aMktDate[0];
+                    var aMonth = aMktDate[1];
+                    var aDay = aMktDate[2];
+                    // 換月 
+                    if (lastMonth != aMonth) {
+                        // 第一個月不檢查上個月
+                        if (!b26_find && lastMonth != "") {
+                            // 上個月26沒扣到
+                            b26_find_prevM = true;
+                        }
+                        else {
+                            b26_find_prevM = false;
+                        }
+                        b06_find = false;
+                        b16_find = false;
+                        b26_find = false;
+                        lastMonth = aMonth;
+                    }
+
+                    // 找最接近6的扣款日
+                    if (!b06_find && b06) {
+                        if (aDay >= 6 && aDay < 16) {
+                            b06_find = true;
+                            data[i].PlanDate = aYear + "-" + aMonth + "-06";
+                            ret.push(data[i]);
+                        }
+                    }
+
+                    // 找最接近16的扣款日
+                    if (!b16_find && b16) {
+                        if (aDay >= 16 && aDay < 26) {
+                            b16_find = true;
+                            data[i].PlanDate = aYear + "-" + aMonth + "-16";
+                            ret.push(data[i]);
+                        }
+                    }
+
+                    // 找最接近26的扣款日
+                    if (!b26_find && b26) {
+                        if (aDay >= 26) {
+                            b26_find = true;
+                            data[i].PlanDate = aYear + "-" + aMonth + "-26";
+                            ret.push(data[i]);
+                        }
+                    }
+
+                    // 上個月沒找到，多找1~5
+                    if (b26_find_prevM && b26) {
+                        if (aDay < 6) {
+                            // 取上一個月的日期
+                            let lastMonth = new Date(parseInt(aYear), parseInt(aMonth) - 1, 1, 0, 0, 0);
+                            data[i].PlanDate = lastMonth.getFullYear() + "-" + (lastMonth.getMonth() + 1).padLeft() + "-26";
+                            ret.push(data[i]);
+                            b26_find_prevM = false;
+                        }
+                    }
+                }
+
+                // 計算可購買的股數與金額 近似值
+                for (let i = 0; i < ret.length; i++) {
+                    let xShares = Math.floor(xMoney / ret[i].CP);
+                    let xAmt = Math.ceil(xShares * ret[i].CP);
+                    ret[i].Shares = xShares;
+                    ret[i].Amt = xAmt;
+                }
+                return ret;
+            }
+
+            $("#btnClear").click(function (event) {
+                event.preventDefault();
+                $("#xStockId").val("");
+                $("#xMoney").val("");
+                $("#xDate").val("");
+            });
+
+            $("#btnReset").click(function (event) {
+                event.preventDefault();
+                $("#xStockId").val("2330");
+                $("#xMoney").val("50000");
+                $("#xDate").val("2020-11-01");
+
+                console.log("06-> " + $(".chk06").prop('checked'));
+                console.log("16-> " + $(".chk16").prop('checked'));
+                console.log("26-> " + $(".chk26").prop('checked'));
+            });
+
+            $("#btnQuery").click(function (event) {
+                event.preventDefault();
+                // 檢查輸入
+                if ($("#xStockId").val() == "") {
+                    $("#xStockId").focus();
+                    return;
+                }
+                if ($(".chk06").prop('checked') || $(".chk16").prop('checked') || $(".chk26").prop('checked')) {
+                }
+                else {
+                    // 請選擇一種扣款方式
+                    return;
+                }
+
+                // 是否需要Server端壓縮、Client端解壓縮
+                let xGZip = true;
+                // 準備參數
+                let xData = {
+                    "stockId": $("#xStockId").val(),
+                    "sDate": $("#xDate").val(),
+                    "GZip": xGZip,
+                }
+                let paramObj = {
+                    "URL": "http://localhost:8080/StockModule/StockQuery",
+                    "type": "GET",
+                    "timeout": 10000,
+                    "data": xData,
+                };
+                // 資料查詢
+                let xStockQuery = new SyspowerLib.StockQuery(initObj);
+                if (!xGZip) {
+                    xStockQuery.queryInfo(paramObj, mCallbackHandler, mErrorHandlerEx);
+                }
+                else {
+                    xStockQuery.queryInfoBlob_Unzip(paramObj, mCallbackHandler, mErrorHandlerEx);
+                }
+
+            });
+
+        });
+    });
+
+
+</script>
