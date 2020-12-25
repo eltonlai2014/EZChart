@@ -40,5 +40,4 @@ define(["require", "exports", "./Helper/index"], function (require, exports, ind
         return StockQuery;
     }());
     exports.StockQuery = StockQuery;
-    ;
 });

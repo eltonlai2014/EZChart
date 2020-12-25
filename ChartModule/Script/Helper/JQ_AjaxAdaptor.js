@@ -86,5 +86,4 @@ define(["require", "exports", "jquery"], function (require, exports, jquery_1) {
         return JQ_AjaxAdaptor;
     }());
     exports.JQ_AjaxAdaptor = JQ_AjaxAdaptor;
-    ;
 });

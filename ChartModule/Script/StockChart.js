@@ -317,7 +317,6 @@ define(["require", "exports", "./Helper/index"], function (require, exports, ind
         StockChart.prototype.drawMain = function () {
             this.drawChartArea();
         };
-        ;
         return StockChart;
     }(index_1.BaseChart));
     exports.StockChart = StockChart;

@@ -1,8 +1,6 @@
 // import * as AJAX_Helper from "./Helper/index";
 import { JQ_AjaxAdaptor } from "./Helper/index";
 
-declare let Zlib: any; // 這行ts不會做任何處理
-
 export class StockQuery {
     initObj: any;
     aJQ_AjaxAdaptor: JQ_AjaxAdaptor;
