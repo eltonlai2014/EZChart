@@ -367,7 +367,7 @@ export class StockChart extends BaseChart {
     // 主要繪圖方法
     public drawMain(): void {
         this.drawChartArea();
-    };
+    }
 }
 
 enum ChartType {

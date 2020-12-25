@@ -90,5 +90,5 @@ export class JQ_AjaxAdaptor {
         );
     }
 
-};
+}
 

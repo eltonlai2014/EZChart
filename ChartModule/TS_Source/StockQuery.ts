@@ -47,7 +47,6 @@ export class StockQuery {
         ret = decodeURIComponent(escape(ret));
         return ret;
     }
-
-};
+}
 
 
