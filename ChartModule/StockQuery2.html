@@ -108,11 +108,7 @@
             "jquery": "lib/jquery"
         }
     });
-    /*
-        require(["StockQuery"], function (SyspowerLib) {
-            console.log(SyspowerLib);
-        });
-    */
+
     require(["jquery", "StockQuery", "StockChart"], function ($, SyspowerLib, SyspowerLib2) {
         $(document).ready(function () {
             let initObj = {

@@ -33,7 +33,8 @@ export class JQ_AjaxAdaptor {
         if (JQ_AjaxAdaptor.DEBUG) {
             console.log(param);
         }
-        $.ajax(
+        // 使用jQuery不要用$，避免webpack有bug
+        jQuery.ajax(
             param.URL,
             {
                 type: param.type,
@@ -77,7 +78,7 @@ export class JQ_AjaxAdaptor {
         if (JQ_AjaxAdaptor.DEBUG) {
             console.log(param);
         }
-        $.ajax(
+        jQuery.ajax(
             param.URL,
             {
                 type: param.type,

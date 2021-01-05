@@ -370,7 +370,7 @@ export class StockChart extends BaseChart {
     }
 }
 
-enum ChartType {
+const enum ChartType {
     INV_CHART = 1,
     REAL_CHART,
 }

@@ -56,10 +56,10 @@ define(["require", "exports", "./Helper/index"], function (require, exports, ind
                         var xRadius = 5;
                         var aInfo = _this.mChartData[xIndex];
                         var aColor = _this.hexToRgb(_this.mRealColor);
-                        var yPos = _this.getYPosByType(aInfo, ChartType.REAL_CHART);
+                        var yPos = _this.getYPosByType(aInfo, 2 /* REAL_CHART */);
                         _this.drawCircle(_this.mContext, LineX, yPos, xRadius, 'rgba(' + aColor.r + ',' + aColor.g + ',' + aColor.b + ',' + xAlpha + ')');
                         aColor = _this.hexToRgb(_this.mInvColor);
-                        yPos = _this.getYPosByType(aInfo, ChartType.INV_CHART);
+                        yPos = _this.getYPosByType(aInfo, 1 /* INV_CHART */);
                         _this.drawCircle(_this.mContext, LineX, yPos, xRadius, 'rgba(' + aColor.r + ',' + aColor.g + ',' + aColor.b + ',' + xAlpha + ')');
                     }
                     // 畫提示資料
@@ -217,9 +217,9 @@ define(["require", "exports", "./Helper/index"], function (require, exports, ind
             // X軸間隔
             this.mChartRectWidth = this.mChartWidth / (xChartData.length + 1);
             // 畫投資金額
-            this.drawChartWithCircle(xChartData, ChartType.INV_CHART, this.mInvColor, 1.5);
+            this.drawChartWithCircle(xChartData, 1 /* INV_CHART */, this.mInvColor, 1.5);
             // 畫實際金額
-            this.drawChart(xChartData, ChartType.REAL_CHART, this.mRealColor, 2);
+            this.drawChart(xChartData, 2 /* REAL_CHART */, this.mRealColor, 2);
         };
         // 畫底圖與座標軸
         StockChart.prototype.drawAxis = function () {
@@ -294,9 +294,9 @@ define(["require", "exports", "./Helper/index"], function (require, exports, ind
         // 依據不同型態計算Y軸位置
         StockChart.prototype.getYPosByType = function (aInfo, aType) {
             switch (aType) {
-                case ChartType.INV_CHART:
+                case 1 /* INV_CHART */:
                     return this.mTopHeight + this.mChartHeight * (this.mMaxRealAmt - aInfo.SumAmt) / (this.mMaxRealAmt - this.mMinRealAmt);
-                case ChartType.REAL_CHART:
+                case 2 /* REAL_CHART */:
                     return this.mTopHeight + this.mChartHeight * (this.mMaxRealAmt - aInfo.RealAmt) / (this.mMaxRealAmt - this.mMinRealAmt);
                 default:
                     return 0;
@@ -320,9 +320,4 @@ define(["require", "exports", "./Helper/index"], function (require, exports, ind
         return StockChart;
     }(index_1.BaseChart));
     exports.StockChart = StockChart;
-    var ChartType;
-    (function (ChartType) {
-        ChartType[ChartType["INV_CHART"] = 1] = "INV_CHART";
-        ChartType[ChartType["REAL_CHART"] = 2] = "REAL_CHART";
-    })(ChartType || (ChartType = {}));
 });
