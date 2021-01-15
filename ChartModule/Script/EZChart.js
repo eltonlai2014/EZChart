@@ -14,10 +14,9 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-define("Helper/JQ_AjaxAdaptor", ["require", "exports", "jquery"], function (require, exports, jquery_1) {
+define("Helper/JQ_AjaxAdaptor", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    jquery_1 = __importDefault(jquery_1);
     var JQ_AjaxAdaptor = /** @class */ (function () {
         function JQ_AjaxAdaptor(initObj) {
             this.descroption = initObj.descroption;
@@ -43,7 +42,8 @@ define("Helper/JQ_AjaxAdaptor", ["require", "exports", "jquery"], function (requ
             if (JQ_AjaxAdaptor.DEBUG) {
                 console.log(param);
             }
-            jquery_1.default.ajax(param.URL, {
+            // 使用jQuery不要用$，避免webpack有bug
+            jQuery.ajax(param.URL, {
                 type: param.type,
                 timeout: param.timeout,
                 cache: false,
@@ -83,7 +83,7 @@ define("Helper/JQ_AjaxAdaptor", ["require", "exports", "jquery"], function (requ
             if (JQ_AjaxAdaptor.DEBUG) {
                 console.log(param);
             }
-            jquery_1.default.ajax(param.URL, {
+            jQuery.ajax(param.URL, {
                 type: param.type,
                 timeout: param.timeout,
                 cache: false,
@@ -574,7 +574,79 @@ define("Helper/HashMap", ["require", "exports"], function (require, exports) {
     }());
     exports.HashMap = HashMap;
 });
-define("Helper/index", ["require", "exports", "Helper/JQ_AjaxAdaptor", "Helper/BaseChart", "Helper/HashMap"], function (require, exports, JQ_AjaxAdaptor_1, BaseChart_1, HashMap_1) {
+define("Helper/AxiosAdaptor", ["require", "exports", "./../../Script/lib/axios"], function (require, exports, axios_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    axios_1 = __importDefault(axios_1);
+    var AxiosAdaptor = /** @class */ (function () {
+        function AxiosAdaptor(initObj) {
+            this.descroption = initObj.descroption;
+            this.initObj = initObj;
+            this.userRequest = axios_1.default.create({
+                baseURL: this.initObj.URL || AxiosAdaptor.DEFAULT_URL
+            });
+        }
+        AxiosAdaptor.prototype.getDescription = function () {
+            return "[AxiosAdaptor] " + this.descroption + " " + this.initObj;
+        };
+        AxiosAdaptor.prototype.queryInfoBlob = function (param) {
+            // 加上timestamp避免cache
+            if (param.URL) {
+                // 加上timestamp避免cache
+                var timestamp = new Date().getTime();
+                param.URL = param.URL + "?timestamp=" + timestamp;
+            }
+            // 預設參數設定
+            if (!param.type) {
+                param.type = this.initObj.type || AxiosAdaptor.DEFAULT_METHOD;
+            }
+            if (!param.timeout) {
+                param.timeout = this.initObj.timeout || AxiosAdaptor.DEFAULT_TIMEOUT;
+            }
+            if (AxiosAdaptor.DEBUG) {
+                console.log(param);
+            }
+            if (param.type.toUpperCase() === "POST") {
+                return this.userRequest.post(param.URL, null, { params: param.data, responseType: 'arraybuffer' });
+            }
+            else if (param.type.toUpperCase() === "GET") {
+                return this.userRequest.get(param.URL, null, { params: param.data, responseType: 'arraybuffer' });
+            }
+        };
+        AxiosAdaptor.prototype.queryInfo = function (param) {
+            if (param.URL) {
+                // 加上timestamp避免cache
+                var timestamp = new Date().getTime();
+                param.URL = param.URL + "?timestamp=" + timestamp;
+            }
+            // 預設參數設定
+            if (!param.type) {
+                param.type = this.initObj.type || AxiosAdaptor.DEFAULT_METHOD;
+            }
+            if (!param.timeout) {
+                param.timeout = this.initObj.timeout || AxiosAdaptor.DEFAULT_TIMEOUT;
+            }
+            if (AxiosAdaptor.DEBUG) {
+                console.log(param);
+            }
+            if (param.type.toUpperCase() == "POST") {
+                return this.userRequest.post(param.URL, null, { 'params': param.data, 'responseType': 'application/json' });
+            }
+            else if (param.type.toUpperCase() == "GET") {
+                return this.userRequest.get(param.URL, null, { 'params': param.data, 'responseType': 'application/json' });
+            }
+        };
+        // Axios 工具類別
+        AxiosAdaptor.DEBUG = true;
+        AxiosAdaptor.DEFAULT_METHOD = "GET";
+        AxiosAdaptor.DEFAULT_TIMEOUT = 20000;
+        AxiosAdaptor.DEFAULT_URL = "/";
+        return AxiosAdaptor;
+    }());
+    exports.AxiosAdaptor = AxiosAdaptor;
+    ;
+});
+define("Helper/index", ["require", "exports", "Helper/JQ_AjaxAdaptor", "Helper/BaseChart", "Helper/HashMap", "Helper/AxiosAdaptor"], function (require, exports, JQ_AjaxAdaptor_1, BaseChart_1, HashMap_1, AxiosAdaptor_1) {
     "use strict";
     function __export(m) {
         for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
@@ -584,6 +656,7 @@ define("Helper/index", ["require", "exports", "Helper/JQ_AjaxAdaptor", "Helper/B
     __export(JQ_AjaxAdaptor_1);
     __export(BaseChart_1);
     __export(HashMap_1);
+    __export(AxiosAdaptor_1);
 });
 define("StockQuery", ["require", "exports", "Helper/index"], function (require, exports, index_1) {
     "use strict";
@@ -597,6 +670,30 @@ define("StockQuery", ["require", "exports", "Helper/index"], function (require, 
             this.aJQ_AjaxAdaptor.queryInfo(param, s_handle, e_handle);
         };
         StockQuery.prototype.queryInfoBlob = function (param, s_handle, e_handle) {
+            var _this = this;
+            try {
+                // 資料類別 arraybuffer 如果是壓縮的，回傳資料時先解壓並轉為json
+                if (param.data.GZip) {
+                    this.aJQ_AjaxAdaptor.queryInfoBlob(param, function (data) {
+                        // compress mode =================
+                        // response is unsigned 8 bit integer
+                        var responseArray = new Uint8Array(data);
+                        //console.log("data.length=" + responseArray.length);
+                        // 第三方元件宣告 ZLib.d.ts，這行ts不會做任何處理
+                        var deCompressBuffer = new Zlib.Gunzip(responseArray).decompress(); // 將Bytes解壓縮 
+                        //console.log("deCompressBuffer.length=" + deCompressBuffer.length);
+                        var aObj = JSON.parse(_this.getString(deCompressBuffer));
+                        if (s_handle instanceof Function) {
+                            s_handle(aObj);
+                        }
+                    }, e_handle);
+                    return;
+                }
+            }
+            catch (err) {
+                console.log(err.message);
+            }
+            // 沒壓縮模式用 arraybuffer 也可能是檔案下載
             this.aJQ_AjaxAdaptor.queryInfoBlob(param, s_handle, e_handle);
         };
         StockQuery.prototype.queryInfoBlob_Unzip = function (param, s_handle, e_handle) {
@@ -606,7 +703,7 @@ define("StockQuery", ["require", "exports", "Helper/index"], function (require, 
                 // response is unsigned 8 bit integer
                 var responseArray = new Uint8Array(data);
                 //console.log("data.length=" + responseArray.length);
-                // 這行ts不會做任何處理
+                // 第三方元件宣告 ZLib.d.ts，這行ts不會做任何處理
                 var deCompressBuffer = new Zlib.Gunzip(responseArray).decompress(); // 將Bytes解壓縮 
                 //console.log("deCompressBuffer.length=" + deCompressBuffer.length);
                 var aObj = JSON.parse(_this.getString(deCompressBuffer));
@@ -615,7 +712,7 @@ define("StockQuery", ["require", "exports", "Helper/index"], function (require, 
                 }
             }, e_handle);
         };
-        // Uint8Array轉字串2
+        // Uint8Array轉字串
         StockQuery.prototype.getString = function (uintArray) {
             var ret = "";
             for (var i = 0, n = uintArray.length; i < n; i++) {
@@ -673,10 +770,10 @@ define("StockChart", ["require", "exports", "Helper/index"], function (require, 
                         var xRadius = 5;
                         var aInfo = _this.mChartData[xIndex];
                         var aColor = _this.hexToRgb(_this.mRealColor);
-                        var yPos = _this.getYPosByType(aInfo, ChartType.REAL_CHART);
+                        var yPos = _this.getYPosByType(aInfo, 2 /* REAL_CHART */);
                         _this.drawCircle(_this.mContext, LineX, yPos, xRadius, 'rgba(' + aColor.r + ',' + aColor.g + ',' + aColor.b + ',' + xAlpha + ')');
                         aColor = _this.hexToRgb(_this.mInvColor);
-                        yPos = _this.getYPosByType(aInfo, ChartType.INV_CHART);
+                        yPos = _this.getYPosByType(aInfo, 1 /* INV_CHART */);
                         _this.drawCircle(_this.mContext, LineX, yPos, xRadius, 'rgba(' + aColor.r + ',' + aColor.g + ',' + aColor.b + ',' + xAlpha + ')');
                     }
                     // 畫提示資料
@@ -834,9 +931,9 @@ define("StockChart", ["require", "exports", "Helper/index"], function (require, 
             // X軸間隔
             this.mChartRectWidth = this.mChartWidth / (xChartData.length + 1);
             // 畫投資金額
-            this.drawChartWithCircle(xChartData, ChartType.INV_CHART, this.mInvColor, 1.5);
+            this.drawChartWithCircle(xChartData, 1 /* INV_CHART */, this.mInvColor, 1.5);
             // 畫實際金額
-            this.drawChart(xChartData, ChartType.REAL_CHART, this.mRealColor, 2);
+            this.drawChart(xChartData, 2 /* REAL_CHART */, this.mRealColor, 2);
         };
         // 畫底圖與座標軸
         StockChart.prototype.drawAxis = function () {
@@ -911,9 +1008,9 @@ define("StockChart", ["require", "exports", "Helper/index"], function (require, 
         // 依據不同型態計算Y軸位置
         StockChart.prototype.getYPosByType = function (aInfo, aType) {
             switch (aType) {
-                case ChartType.INV_CHART:
+                case 1 /* INV_CHART */:
                     return this.mTopHeight + this.mChartHeight * (this.mMaxRealAmt - aInfo.SumAmt) / (this.mMaxRealAmt - this.mMinRealAmt);
-                case ChartType.REAL_CHART:
+                case 2 /* REAL_CHART */:
                     return this.mTopHeight + this.mChartHeight * (this.mMaxRealAmt - aInfo.RealAmt) / (this.mMaxRealAmt - this.mMinRealAmt);
                 default:
                     return 0;
@@ -937,9 +1034,97 @@ define("StockChart", ["require", "exports", "Helper/index"], function (require, 
         return StockChart;
     }(index_2.BaseChart));
     exports.StockChart = StockChart;
-    var ChartType;
-    (function (ChartType) {
-        ChartType[ChartType["INV_CHART"] = 1] = "INV_CHART";
-        ChartType[ChartType["REAL_CHART"] = 2] = "REAL_CHART";
-    })(ChartType || (ChartType = {}));
+});
+define("StockQueryEx", ["require", "exports", "Helper/AxiosAdaptor"], function (require, exports, AxiosAdaptor_2) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var StockQueryEx = /** @class */ (function () {
+        function StockQueryEx(initObj) {
+            this.initObj = initObj;
+            this.aAxiosAdaptor = new AxiosAdaptor_2.AxiosAdaptor(initObj);
+        }
+        StockQueryEx.prototype.queryInfo = function (param, s_handle, e_handle) {
+            // Axios Promise 包裝為 callback function
+            this.aAxiosAdaptor.queryInfo(param)
+                .then(function (res) {
+                if (s_handle instanceof Function) {
+                    s_handle(res.data);
+                }
+            })
+                .catch(this.errorHandle(e_handle))
+                .finally(function () {
+                // 不論失敗成功皆會執行 
+                // console.log("finally ...");
+            });
+        };
+        StockQueryEx.prototype.errorHandle = function (e_handle) {
+            return function (error) {
+                if (e_handle instanceof Function) {
+                    var errStatus = {};
+                    var errMsg = {};
+                    if (error.response) {
+                        // Request made and server responded
+                        errStatus = error.response;
+                    }
+                    else if (error.request) {
+                        errStatus = error.request;
+                    }
+                    if (error.message) {
+                        // Something happened in setting up the request that triggered an Error
+                        errMsg = error.message;
+                    }
+                    e_handle(errStatus, errMsg);
+                }
+            };
+        };
+        StockQueryEx.prototype.queryInfoBlob = function (param, s_handle, e_handle) {
+            this.aAxiosAdaptor.queryInfoBlob(param)
+                .then(function (res) {
+                if (s_handle instanceof Function) {
+                    s_handle(res.data);
+                }
+            })
+                .catch(this.errorHandle(e_handle))
+                .finally(function () {
+                // 不論失敗成功皆會執行 
+                // console.log("finally ...");
+            });
+        };
+        StockQueryEx.prototype.queryInfoBlob_Unzip = function (param, s_handle, e_handle) {
+            var _this = this;
+            // Axios Promise 包裝為 callback function
+            this.aAxiosAdaptor.queryInfoBlob(param)
+                .then(function (res) {
+                // compress mode =================
+                // response is unsigned 8 bit integer
+                var responseArray = new Uint8Array(res.data);
+                //console.log("data.length=" + responseArray.length);
+                // 這行ts不會做任何處理
+                var deCompressBuffer = new Zlib.Gunzip(responseArray).decompress(); // 將Bytes解壓縮 
+                //console.log("deCompressBuffer.length=" + deCompressBuffer.length);
+                var aObj = JSON.parse(_this.getString(deCompressBuffer));
+                //console.log(aObj);
+                if (s_handle instanceof Function) {
+                    s_handle(aObj);
+                }
+            })
+                .catch(this.errorHandle(e_handle))
+                .finally(function () {
+                // 不論失敗成功皆會執行 
+                // console.log("finally ...");
+            });
+        };
+        // Uint8Array轉字串2
+        StockQueryEx.prototype.getString = function (uintArray) {
+            var ret = "";
+            for (var i = 0, n = uintArray.length; i < n; i++) {
+                ret += String.fromCharCode(uintArray[i]);
+            }
+            ret = decodeURIComponent(escape(ret));
+            return ret;
+        };
+        return StockQueryEx;
+    }());
+    exports.StockQueryEx = StockQueryEx;
+    ;
 });

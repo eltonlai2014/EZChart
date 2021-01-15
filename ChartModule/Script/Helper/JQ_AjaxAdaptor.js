@@ -1,10 +1,6 @@
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-define(["require", "exports", "jquery"], function (require, exports, jquery_1) {
+define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    jquery_1 = __importDefault(jquery_1);
     var JQ_AjaxAdaptor = /** @class */ (function () {
         function JQ_AjaxAdaptor(initObj) {
             this.descroption = initObj.descroption;
@@ -30,7 +26,8 @@ define(["require", "exports", "jquery"], function (require, exports, jquery_1) {
             if (JQ_AjaxAdaptor.DEBUG) {
                 console.log(param);
             }
-            jquery_1.default.ajax(param.URL, {
+            // 使用jQuery不要用$，避免webpack有bug
+            jQuery.ajax(param.URL, {
                 type: param.type,
                 timeout: param.timeout,
                 cache: false,
@@ -70,7 +67,7 @@ define(["require", "exports", "jquery"], function (require, exports, jquery_1) {
             if (JQ_AjaxAdaptor.DEBUG) {
                 console.log(param);
             }
-            jquery_1.default.ajax(param.URL, {
+            jQuery.ajax(param.URL, {
                 type: param.type,
                 timeout: param.timeout,
                 cache: false,

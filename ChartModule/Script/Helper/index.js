@@ -1,4 +1,4 @@
-define(["require", "exports", "./JQ_AjaxAdaptor", "./BaseChart", "./HashMap"], function (require, exports, JQ_AjaxAdaptor_1, BaseChart_1, HashMap_1) {
+define(["require", "exports", "./JQ_AjaxAdaptor", "./BaseChart", "./HashMap", "./AxiosAdaptor"], function (require, exports, JQ_AjaxAdaptor_1, BaseChart_1, HashMap_1, AxiosAdaptor_1) {
     "use strict";
     function __export(m) {
         for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
@@ -8,4 +8,5 @@ define(["require", "exports", "./JQ_AjaxAdaptor", "./BaseChart", "./HashMap"], f
     __export(JQ_AjaxAdaptor_1);
     __export(BaseChart_1);
     __export(HashMap_1);
+    __export(AxiosAdaptor_1);
 });
