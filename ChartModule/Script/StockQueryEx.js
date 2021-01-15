@@ -1,10 +1,10 @@
-define(["require", "exports", "./Helper/AxiosAdaptor"], function (require, exports, AxiosAdaptor_1) {
+define(["require", "exports", "./Helper/index"], function (require, exports, index_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var StockQueryEx = /** @class */ (function () {
         function StockQueryEx(initObj) {
             this.initObj = initObj;
-            this.aAxiosAdaptor = new AxiosAdaptor_1.AxiosAdaptor(initObj);
+            this.aAxiosAdaptor = new index_1.AxiosAdaptor(initObj);
         }
         StockQueryEx.prototype.queryInfo = function (param, s_handle, e_handle) {
             // Axios Promise 包裝為 callback function
@@ -41,17 +41,38 @@ define(["require", "exports", "./Helper/AxiosAdaptor"], function (require, expor
             };
         };
         StockQueryEx.prototype.queryInfoBlob = function (param, s_handle, e_handle) {
-            this.aAxiosAdaptor.queryInfoBlob(param)
-                .then(function (res) {
-                if (s_handle instanceof Function) {
-                    s_handle(res.data);
+            var _this = this;
+            try {
+                // 資料類別 arraybuffer 如果是壓縮的，回傳資料時先解壓並轉為json
+                if (param.data.GZip) {
+                    this.aAxiosAdaptor.queryInfoBlob(param)
+                        .then(function (res) {
+                        // compress mode =================
+                        // response is unsigned 8 bit integer
+                        var responseArray = new Uint8Array(res.data);
+                        //console.log("data.length=" + responseArray.length);
+                        // 這行ts不會做任何處理
+                        var deCompressBuffer = new Zlib.Gunzip(responseArray).decompress(); // 將Bytes解壓縮 
+                        //console.log("deCompressBuffer.length=" + deCompressBuffer.length);
+                        var aObj = JSON.parse(_this.getString(deCompressBuffer));
+                        //console.log(aObj);
+                        if (s_handle instanceof Function) {
+                            s_handle(aObj);
+                        }
+                    })
+                        .catch(this.errorHandle(e_handle))
+                        .finally(function () {
+                        // 不論失敗成功皆會執行 
+                        // console.log("finally ...");
+                    });
+                    return;
                 }
-            })
-                .catch(this.errorHandle(e_handle))
-                .finally(function () {
-                // 不論失敗成功皆會執行 
-                // console.log("finally ...");
-            });
+            }
+            catch (err) {
+                console.log(err.message);
+            }
+            // 沒壓縮模式用 arraybuffer 也可能是檔案下載
+            this.aAxiosAdaptor.queryInfoBlob(param);
         };
         StockQueryEx.prototype.queryInfoBlob_Unzip = function (param, s_handle, e_handle) {
             var _this = this;

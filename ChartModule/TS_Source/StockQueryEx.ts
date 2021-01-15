@@ -1,5 +1,5 @@
 
-import { AxiosAdaptor } from "./Helper/AxiosAdaptor";
+import { AxiosAdaptor } from "./Helper/index";
 
 declare let Zlib: any; // 這行ts不會做任何處理
 
@@ -49,17 +49,38 @@ export class StockQueryEx {
     }
 
     public queryInfoBlob(param: any, s_handle: any, e_handle: any): void {
-        this.aAxiosAdaptor.queryInfoBlob(param)
-            .then((res: any) => {
-                if (s_handle instanceof Function) {
-                    s_handle(res.data);
-                }
-            })
-            .catch(this.errorHandle(e_handle))
-            .finally(function () {
-                // 不論失敗成功皆會執行 
-                // console.log("finally ...");
-            })
+        try {
+            // 資料類別 arraybuffer 如果是壓縮的，回傳資料時先解壓並轉為json
+            if (param.data.GZip) {
+                this.aAxiosAdaptor.queryInfoBlob(param)
+                    .then((res: any) => {
+                        // compress mode =================
+                        // response is unsigned 8 bit integer
+                        let responseArray = new Uint8Array(res.data);
+                        //console.log("data.length=" + responseArray.length);
+                        // 這行ts不會做任何處理
+                        let deCompressBuffer = new Zlib.Gunzip(responseArray).decompress(); // 將Bytes解壓縮 
+                        //console.log("deCompressBuffer.length=" + deCompressBuffer.length);
+                        let aObj = JSON.parse(this.getString(deCompressBuffer));
+                        //console.log(aObj);
+                        if (s_handle instanceof Function) {
+                            s_handle(aObj);
+                        }
+
+                    })
+                    .catch(this.errorHandle(e_handle))
+                    .finally(function () {
+                        // 不論失敗成功皆會執行 
+                        // console.log("finally ...");
+                    })
+                return;
+            }
+        }
+        catch (err) {
+            console.log(err.message);
+        }
+        // 沒壓縮模式用 arraybuffer 也可能是檔案下載
+        this.aAxiosAdaptor.queryInfoBlob(param);
     }
 
     public queryInfoBlob_Unzip(param: any, s_handle: any, e_handle: any): void {
@@ -87,7 +108,7 @@ export class StockQueryEx {
             })
 
     }
-    
+
     // Uint8Array轉字串2
     private getString(uintArray: any) {
         let ret = "";
